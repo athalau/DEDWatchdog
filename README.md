@@ -57,26 +57,31 @@ Hitting the `Rescan` button does not help as long as you dont replug the USB dev
 This is by no means a bug in Falcon BMS but either a bug in the DEDHub application or the Firmware on the USB device.
 
 ## PARTIAL WORKAROUND
-It's partial because you need to click the rescan button for whatever reason, even if you reset the port. The Watchdog and client script will get you rid of the clickdance for the Exception messages and manual restart of stuff.
+Using the Watchdog client/server scripts will help to limit the clickdance - i.e. close the info popup and exception error window, replug the USB cable, and restarting the DEDHub software. It's partial only, because you still need to click the rescan button in the DEDHub. For whatever reason, even if you reset the USB port and restart the DEDHub, a rescan seems not to get triggered automagically by the DEDHub.
 
+I created a Windows powershell based Watchdog daemon and a client script. Both communicate over a named pipe so that the watchdog client can run unprivileged and notify the watchdog daemon (running privileged) to restart the USB device. This is achived by sending the magic string "RestartDED" from the client to the server. Every other string is ignored by the watchdog daemon. After the magic string is send, the watchdog client then restarts the DEDHub application.
+
+I used Powershell because it should be available on every Windows client running Falcon BMS. I have very limited knowledge in Windows Powershell, so don't expect fancy or even beautyful code compliant to any paradigm :). I split it into two scripts because I like the idea of least privilege. The only thing that is needed to be done as real Administrator is the reset of the USB port/device. it could have been done in one script that just does everything. But this would have been ended up running the DEDHub with Administrator privileges.
+### Watchdog Daemon - DED_watchdog_server.ps1
+
+#### Prerequesite
 **Note:** the Watchdog needs an additional .exe from here:
  https://www.uwe-sieber.de/misc_tools_e.html (RestartUsbPort V1.2.1 - Restarts a USB port)
 
 It's full path is configured in the `$USBResetCmd` variable. You need to modify it to your needs. Drto. for the USD ID of your DED. It may be different from mine.
 
-`RestartUsbPort.exe` is needed, because the powershell build-in pnputil /restart-device mechanic seems to be unreliable for this task. It works the first time you execute, but then it refuses to reset again because it insists on rebooting to take effect. Uwe Sieber developed several useful tools, especially USB stuff. I can recommend taking a look at his old-school software repo.
+`RestartUsbPort.exe` is needed, because the Powershell build-in `pnputil /restart-device` mechanic seems to be unreliable for this task. It works the first time you execute, but then it refuses to reset again because it insists on rebooting to take effect. YMMV. Uwe Sieber, the author of RestatUsbPort, developed several useful tools. I recommend taking a look at his old-school software repo.
 
-Back to topic:
-I created a Windows powershell based Watchdog daemon and a Client script. Both communicate over a named pipe so that the unrpivileged Client can notify the privileged Watchdog to restart the USB device with a "magic string".
+#### ExecutionPolicy switch
+Default setting in windows for running powershell scripts seems to be: *disabled*. Hence, an error would be thrown if you simply execute this in a powershell like `powershell.exe <scriptname>`. If an error messages appears telling you, taht the execution of scripts is not allowed, you need to pass the `ExecutionPolicy` switch with the value `Bypass` on the command line., i.e. `powershell.exe -ExecutionPolicy Bypass <other options>... <script>`. This temporary bypasses the restriction to execute Powershell scripts for excactly this single call. This does not change your default setting, but lets you execute the script in question.
 
-Default setting in windows for running powershell scripts seems to be: disabled. Hence, an error would be thrown if you simply execute this in a powershell or as an argument like `powershell.exe -ExecutionPolicy Bypass <...>`. This temporary bypasses the restriction parameter for excactly this call. This does not change your default setting, but lets you execute the script in question.
+See https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies for more information.
 
-I used Powershell because it should be available on every Windows client running Falcon BMS. I have very limited knowledge in Windows Powershell, so don't expect fancy or even beautyful code compliant to any paradigm :). I split it into two scripts because I like the idea of least privilege. The only thing that is needed to be done as real Administrator is the reset of the USB port/device. This is the job of the Watchdog, code as follows (poor mens documentation see code).
-
-Recap: Save the code above to a file named DEDWatchdog.ps1, create a shortcut next to it, edit the shortcut properties Target to be *powershell.exe -noexit -ExecutionPolicy Bypass -file  <path_to_DEDWatchdog.ps1>*, right click "Run As Administrator" or tick the "run as administrator" checkbox in the properties of the shortcut. Double clickk the shortcut, and the Watchdog runs until you close it:
+Create a shortcut pointing to `DED_watchdog_server.ps1`, edit `Properties` > `Target` to be `powershell.exe -noexit -ExecutionPolicy Bypass -file  <path_to_DEDWatchdog.ps1>`, and tick the "run as administrator" checkbox in the properties of the shortcut. To run as Administrator, you can alternatively right-click on the shortcut and select "Run As Administrator" manually. The watchdog server runs forever until you close the powersehll window it launched:
 
 ![7dae97fa-8961-475c-94ac-8e9dd5fcdcf8-grafik.png](https://i.imgur.com/1KNH0HE.png) 
 
+### Watchdog Client - DED_watchdog_client.ps1
 The client part can and should be run in a powerswhell launched with your user, i.e. the one you are using to normally launch Falcon, DEDHub etc.. Save the code to DEDWatchdogClient.ps1, create a Shortcut to the script so you can launch it with a double click.
 
 The client script does the following:
