@@ -20,8 +20,8 @@ For whatever reason, the .Net application throws the following error from time t
 
 ![dotNetUNhandledExeption.png](https://i.imgur.com/Z6KaHRA.png) 
 
-It's an "Unhandled Exception" message. Before you can click anything, you need to "OK" the modal that tells you to restart the DED. The *details* button in the Exception reveals, that the DEDHub application lost the connection to the serial console:
-```
+It's an "Unhandled Exception" message. Before you can click anything, you need to `OK` the modal that tells you to restart the DED. The `Details` button in the Exception reveals, that the DEDHub application lost the connection to the serial console:
+```C#
 System.IO.IOException: Ein an das System angeschlossenes Gerät funktioniert nicht.
 
    bei System.IO.Ports.InternalResources.WinIOError(Int32 errorCode, String str)
@@ -44,13 +44,15 @@ Besides having Falcon BMS in the background, I noticed a more frequent crash beh
 
 ### DEDHub normal operational status
 This is the Simgears DEDHub Application UI. Bottom right reads the Simulator it connected to (Falcon BMS in the example) and bottom left reads that it's connected to the serial port of the DED device
+
 ![OK.png](https://i.imgur.com/KoPjnu2.png)
 
 ### DEDHub error status
-As soon as the exception is thrown, the DED Hub states that it's unable to find a suitable COM port / device like shown blow
+As soon as the exception is thrown, the DED Hub states that it's unable to find a suitable COM port / device like shown below
+
 ![NOK.png](https://i.imgur.com/1MSpWra.png) 
 
-Hitting the *Rescan* button does not help as long as you dont replug the USB device. This may be achived by physically replugging the cable or through software that is able to reset a specific USB port (pnputil or the like).
+Hitting the `Rescan` button does not help as long as you dont replug the USB device. This may be achived by physically replugging the cable or through software that is able to reset a specific USB port (pnputil or the like).
 
 This is by no means a bug in Falcon BMS but either a bug in the DEDHub application or the Firmware on the USB device.
 
@@ -60,14 +62,14 @@ It's partial because you need to click the rescan button for whatever reason, ev
 **Note:** the Watchdog needs an additional .exe from here:
  https://www.uwe-sieber.de/misc_tools_e.html (RestartUsbPort V1.2.1 - Restarts a USB port)
 
-It's full path is configured in the $USBResetCmd variable. You need to modify it to your needs. Drto. for the USD ID of your DED. It may be different from mine.
+It's full path is configured in the `$USBResetCmd` variable. You need to modify it to your needs. Drto. for the USD ID of your DED. It may be different from mine.
 
-RestartUsbPort.exe is needed, because the powershell build-in pnputil /restart-device mechanic seems to be unreliable for this task. It works the first time you execute, but then it refuses to reset again because it insists on rebooting to take effect. Uwe Sieber developed several useful tools, especially USB stuff. I can recommend taking a look at his old-school software repo.
+`RestartUsbPort.exe` is needed, because the powershell build-in pnputil /restart-device mechanic seems to be unreliable for this task. It works the first time you execute, but then it refuses to reset again because it insists on rebooting to take effect. Uwe Sieber developed several useful tools, especially USB stuff. I can recommend taking a look at his old-school software repo.
 
 Back to topic:
 I created a Windows powershell based Watchdog daemon and a Client script. Both communicate over a named pipe so that the unrpivileged Client can notify the privileged Watchdog to restart the USB device with a "magic string".
 
-Default setting in windows for running powershell scripts seems to be: disabled. Hence, an error would be thrown if you simply execute this in a powershell or as an argument to a powershell.exe call. You need to temporary bypass this restriction with the *-ExecutionPolicy Bypass* parameter. This does not change your default setting, but lets you execute the script in question.
+Default setting in windows for running powershell scripts seems to be: disabled. Hence, an error would be thrown if you simply execute this in a powershell or as an argument like `powershell.exe -ExecutionPolicy Bypass <...>`. This temporary bypasses the restriction parameter for excactly this call. This does not change your default setting, but lets you execute the script in question.
 
 I used Powershell because it should be available on every Windows client running Falcon BMS. I have very limited knowledge in Windows Powershell, so don't expect fancy or even beautyful code compliant to any paradigm :). I split it into two scripts because I like the idea of least privilege. The only thing that is needed to be done as real Administrator is the reset of the USB port/device. This is the job of the Watchdog, code as follows (poor mens documentation see code).
 
@@ -87,16 +89,17 @@ Try it by double clicking the DEDWatchdogClient.ps1 shortcut. It sould laucnch a
 The Watchdog window should have a mesage that looks similar to the following:
 ![20e5a158-caae-4cdb-bbaa-799225d0adde-grafik.png](https://i.imgur.com/6jPNSo8.png) 
 
-FAMOUS LAST WORDS:
+### FAMOUS LAST WORDS
+- this is just a prototype
 - there is no proper error handling implemented
-- the solution helps you to get the freeze situation solved without fiddling around with a USB cable and clicking five different buttons spread over three screens (happens to me always....). It limits your work to trigger the client sciprt with <some technique> and click the Rescan button once.
-- you can either trigger the clientscript by double clicking the shortcut manually or by executing the powershell command with tools that are able to execute external code (FoxVox or additional joystick tools etc., ymmv)
-- pnputil fails, that's why I relied on an additonal  3rd-party .exe instead of built-in powershello features
+- the solution helps to get the freeze situation solved without fiddling around with a USB cable, clicking five different buttons spread over three screens (happens to me always....)
+- It limits your work to trigger the client scpirt with <some technique> and click the Rescan button once. [FoxVox] (https://foxster.itch.io/) may be helpful as a trigger mechanic if you're using a voice control or similar.
+- pnputil fails with "need reboot", that's why I relied on an additonal 3rd-party .exe instead of built-in powershell features. But again, the tools provided by Uwe Sieber are useful, you might want to take a look regardless.
 - The DEDHub does not trigger a RESCAN on launch for whatever reason. When it failed once with the mentioned Exception, you'd even need to click RESCAN manually. This is in contrast to the behavior when you execute the clientscript in a normal behaviour moment, i.e., no error occured on the DED.
 
-**I'm currently looking for a solution to click that damn RESCAN button from the powershell client code. That seems to be not as easy as I hoped.** UIAutomation Module for powershell seems to be non-existent anymore. I found some code with various approaches, but none of them worked.
+**I'm currently looking for a solution to click that damn RESCAN button from the powershell client code. That seems to be not as easy as I thought.** UIAutomation Module for powershell seems to be non-existent anymore. I found some code with various approaches, but none of them worked.
 
-References:
+## References
 - https://learn.microsoft.com/en-us/dotnet/api/system.io.pipes.namedpipeserverstream
 - https://learn.microsoft.com/en-us/dotnet/api/system.io.pipes.pipeaccessrule
 - https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax
