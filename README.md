@@ -57,10 +57,10 @@ Hitting the `Rescan` button does not help as long as you dont replug the USB dev
 
 This is by no means a bug in Falcon BMS but either a bug in the DEDHub application or the Firmware on the USB device.
 
-## PARTIAL WORKAROUND
-Using the Watchdog client/server scripts will help to limit the clickdance - i.e. close the info popup and exception error window, replug the USB cable, and restarting the DEDHub software. It's partial only, because you still need to click the rescan button in the DEDHub. For whatever reason, even if you reset the USB port and restart the DEDHub, a rescan seems not to get triggered automagically by the DEDHub.
+## WORKAROUND
+Using the Watchdog client/server scripts will help to limit the clickdance - i.e. close the info popup and exception error window, replug the USB cable, and restarting the DEDHub software including enforcing a rescan to reestablish the COM port in the DED Hub.
 
-I created a Windows powershell based Watchdog daemon and a client script. Both communicate over a named pipe so that the watchdog client can run unprivileged and notify the watchdog daemon (running privileged) to restart the USB device. This is achived by sending the magic string "RestartDED" from the client to the server. Every other string is ignored by the watchdog daemon. After the magic string is send, the watchdog client then restarts the DEDHub application.
+The Wtachdog Watchdog daemon and client is based on Windows Powershell. Daemon and client communicate over a named pipe so that the watchdog client can run unprivileged and notify the watchdog daemon (running privileged) to restart the USB device. This is achived by sending the magic string "RestartDED" from the client to the server. Every other string is ignored by the watchdog daemon. After the magic string is send, the watchdog client then restarts the DEDHub application and triggers the rescan by virtually pressing the ENTER key.
 
 I used Powershell because it should be available on every Windows client running Falcon BMS. I have very limited knowledge in Windows Powershell, so don't expect fancy or even beautyful code compliant to any paradigm :). I split it into two scripts because I like the idea of least privilege. The only thing that is needed to be done as real Administrator is the reset of the USB port/device. it could have been done in one script that just does everything. But this would have been ended up running the DEDHub with Administrator privileges.
 ### Watchdog Daemon - DED_watchdog_server.ps1
