@@ -112,9 +112,7 @@ The Watchdog window should have a mesage that looks similar to the following:
 - the solution helps to get the freeze situation solved without fiddling around with a USB cable, clicking five different buttons spread over three screens (happens to me always....)
 - It limits your work to trigger the client scpirt with <some technique> and click the Rescan button once. [FoxVox] (https://foxster.itch.io/) may be helpful as a trigger mechanic if you're using a voice control or similar.
 - pnputil fails with "need reboot", that's why I relied on an additonal 3rd-party .exe instead of built-in powershell features. But again, the tools provided by Uwe Sieber are useful, you might want to take a look regardless.
-- The DEDHub does not trigger a RESCAN on launch for whatever reason. When it failed once with the mentioned Exception, you'd even need to click RESCAN manually. This is in contrast to the behavior when you execute the clientscript in a normal behaviour moment, i.e., no error occured on the DED.
-
-**I'm currently looking for a solution to click that damn RESCAN button from the powershell client code. That seems to be not as easy as I thought.** UIAutomation Module for powershell seems to be non-existent anymore. I found some code with various approaches, but none of them worked.
+- The DEDHub does not trigger a RESCAN on launch for whatever reason. When it failed once with the mentioned Exception, you'd even need to click RESCAN manually. This is in contrast to the behavior when you execute the clientscript in a normal behaviour moment, i.e., no error occured on the DED. The cleint script sends the ENTER keypress now at the end. It should therefor be fully automatable now.
 
 ## References
 - https://learn.microsoft.com/en-us/dotnet/api/system.io.pipes.namedpipeserverstream
