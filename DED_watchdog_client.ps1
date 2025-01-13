@@ -1,4 +1,4 @@
-﻿# powershell.exe -ExecutionPolicy Bypass -file  E:\Repositories\DEDWatchdog\DED_watchdog_client.ps1
+# powershell.exe -ExecutionPolicy Bypass -file  E:\Repositories\DEDWatchdog\DED_watchdog_client.ps1
 
 # Named Pipe Client
 $pipeName = "\\.\pipe\DEDWatchdog"
@@ -6,8 +6,32 @@ $pipeName = "\\.\pipe\DEDWatchdog"
 # Location of the Simgears DED Hub Executable, change accordingly
 $DEDHubExecutable = "C:\Program Files (x86)\SimGears\DEDHub\DEDHub.exe"
 
+# Function to bring an application to the foreground
+function setForegroundWindow {
+    param (
+        [string]$processName
+    )
+
+    Add-Type @"
+    using System;
+    using System.Runtime.InteropServices;
+
+    public class User32 {
+        [DllImport("User32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+    }
+"@
+    $process = Get-Process -Name $processName -ErrorAction SilentlyContinue
+    if ($process) {
+        $hWnd = $process.MainWindowHandle
+        [User32]::SetForegroundWindow($hWnd)
+    } else {
+        Write-Host "Process '$processName' not found."
+    }
+}
+
 # Check whether Simgears DEDHub is running
-$DEDHubRunning = Get-Process 'DEDHub' -ErrorAction SilentlyContinue
+$DEDHubRunning = Get-Process -Name 'DEDHub' -ErrorAction SilentlyContinue
 
 # setup pipe
 $pipeClient = New-Object System.IO.Pipes.NamedPipeClientStream(".", $pipeName, [System.IO.Pipes.PipeDirection]::Out)
@@ -25,20 +49,32 @@ if ($DEDHubRunning -ne $null) {
     
 }
 
-# wait a bit
-Write-Output "Sleeping 2 seconds before sending restart message to Watchdog"
-sleep 2
+
+if (!$DEDHubRunning.HasExited) {
+   Start-Sleep 2
+}
 # send restart message to Watchdog to restart the USB device
 $streamWriter.Write("RestartDED")
-Write-Output "Sleeping 2 seconds before relaunching DEDHub"
-sleep 2
-# restart DED Hub
-# TODO: it fails to reconnect to the device even if it's availabletried to call DEDHub via cmd.exe too.
-# Makes no difference. Trigger a rescann is a manual button click. No idea why.
-Write-Output "Restarting DED Hub..."
-Start-Process -FilePath $DEDHubExecutable
-#Start-Process -FilePath "cmd.exe" -ArgumentList '/C "C:\Program Files (x86)\SimGears\DEDHub\DEDHub.exe"' -PassThru
-
 $streamWriter.Flush()
 $pipeClient.Close()
 
+Write-Output "Sleeping 2 seconds before relaunching DEDHub"
+Start-Sleep 2
+
+# restart DED Hub
+Write-Output "Restarting DED Hub..."
+Start-Process -FilePath $DEDHubExecutable
+
+# Bring 'DEDHub' to the foreground
+setForegroundWindow -processName "DEDHub"
+Start-Sleep -Milliseconds 1000
+
+# Send Tab and Return keys to 'foo'
+Add-Type -AssemblyName System.Windows.Forms
+#[System.Windows.Forms.SendKeys]::SendWait("{TAB}")
+Start-Sleep -Milliseconds 1000
+[System.Windows.Forms.SendKeys]::SendWait("{ENTER}")
+
+# Bring 'bar' to the foreground
+Start-Sleep -Milliseconds 700
+setForegroundWindow -processName "Falcon BMS"
