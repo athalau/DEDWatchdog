@@ -84,7 +84,7 @@ See https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.cor
 
 1. Create a shortcut pointing to `DED_watchdog_server.ps1`
 2. Edit `Properties` > `Target` to be `powershell.exe -noexit -ExecutionPolicy Bypass -file  <path_to_DEDWatchdog.ps1>`
-3a. tick the "Run As Administrator" checkbox in the properties of the shortcut
+3. tick the "Run As Administrator" checkbox in the properties of the shortcut
 
 ![grafik](https://github.com/user-attachments/assets/00fdc1fb-0093-4841-8e96-41fe5b15e298)
 
