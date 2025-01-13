@@ -18,7 +18,8 @@ The DEDHub attaches to the Falcon BMS shared memory segments. The shm is provide
 ## Problem Description
 For whatever reason, the .Net application throws the following error from time to time:
 
-![dotNetUNhandledExeption.png](https://i.imgur.com/Z6KaHRA.png) 
+![Z6KaHRA](https://github.com/user-attachments/assets/1aa83b25-d814-4556-9537-f8e978d7f8e2)
+
 
 It's an "Unhandled Exception" message. Before you can click anything, you need to `OK` the modal that tells you to restart the DED. The `Details` button in the Exception reveals, that the DEDHub application lost the connection to the serial console:
 ```C#
@@ -45,12 +46,12 @@ Besides having Falcon BMS in the background, I noticed a more frequent crash beh
 ### DEDHub normal operational status
 This is the Simgears DEDHub Application UI. Bottom right reads the Simulator it connected to (Falcon BMS in the example) and bottom left reads that it's connected to the serial port of the DED device
 
-![OK.png](https://i.imgur.com/KoPjnu2.png)
+![KoPjnu2](https://github.com/user-attachments/assets/0efd3022-e811-4c69-a9ba-f6a17d1511cf)
 
 ### DEDHub error status
 As soon as the exception is thrown, the DED Hub states that it's unable to find a suitable COM port / device like shown below
 
-![NOK.png](https://i.imgur.com/1MSpWra.png) 
+![1MSpWra](https://github.com/user-attachments/assets/e0885924-4e85-4d8e-b24c-4a12aea88cf5)
 
 Hitting the `Rescan` button does not help as long as you dont replug the USB device. This may be achived by physically replugging the cable or through software that is able to reset a specific USB port (pnputil or the like).
 
@@ -73,13 +74,23 @@ It's full path is configured in the `$USBResetCmd` variable. You need to modify 
 `RestartUsbPort.exe` is needed, because the Powershell build-in `pnputil /restart-device` mechanic seems to be unreliable for this task. It works the first time you execute, but then it refuses to reset again because it insists on rebooting to take effect. YMMV. Uwe Sieber, the author of RestatUsbPort, developed several useful tools. I recommend taking a look at his old-school software repo.
 
 #### ExecutionPolicy switch
-Default setting in windows for running powershell scripts seems to be: *disabled*. Hence, an error would be thrown if you simply execute this in a powershell like `powershell.exe <scriptname>`. If an error messages appears telling you, taht the execution of scripts is not allowed, you need to pass the `ExecutionPolicy` switch with the value `Bypass` on the command line., i.e. `powershell.exe -ExecutionPolicy Bypass <other options>... <script>`. This temporary bypasses the restriction to execute Powershell scripts for excactly this single call. This does not change your default setting, but lets you execute the script in question.
+Default setting in windows for running powershell scripts seems to be: *disabled*. Hence, an error would be thrown if you simply execute this in a powershell like `powershell.exe <scriptname>`.
+
+![grafik](https://github.com/user-attachments/assets/d6601ef6-9660-48f5-8680-f558ee7d0428)
+
+If an error message like the above hits you, the execution of scripts is not allowed and you need to pass the `ExecutionPolicy` switch with the value `Bypass` on the command line., i.e. `powershell.exe -ExecutionPolicy Bypass <other options>... <script>`. This temporary bypasses the restriction to execute Powershell scripts for excactly this single call. This does not change your default setting, but lets you execute the script in question.
 
 See https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies for more information.
 
-Create a shortcut pointing to `DED_watchdog_server.ps1`, edit `Properties` > `Target` to be `powershell.exe -noexit -ExecutionPolicy Bypass -file  <path_to_DEDWatchdog.ps1>`, and tick the "run as administrator" checkbox in the properties of the shortcut. To run as Administrator, you can alternatively right-click on the shortcut and select "Run As Administrator" manually. The watchdog server runs forever until you close the powersehll window it launched:
+1. Create a shortcut pointing to `DED_watchdog_server.ps1`
+2. Edit `Properties` > `Target` to be `powershell.exe -noexit -ExecutionPolicy Bypass -file  <path_to_DEDWatchdog.ps1>`
+3a. tick the "Run As Administrator" checkbox in the properties of the shortcut
 
-![7dae97fa-8961-475c-94ac-8e9dd5fcdcf8-grafik.png](https://i.imgur.com/1KNH0HE.png) 
+![grafik](https://github.com/user-attachments/assets/00fdc1fb-0093-4841-8e96-41fe5b15e298)
+
+Alternatively right-click on the shortcut and select "Run As Administrator" manually everytime you launch the daemon. The watchdog server runs forever until you close the powersehll window it launched:
+
+![1KNH0HE](https://github.com/user-attachments/assets/a9fe6731-f419-4a2d-a0ef-50ef1736e451)
 
 ### Watchdog Client - DED_watchdog_client.ps1
 The client part can and should be run in a powerswhell launched with your user, i.e. the one you are using to normally launch Falcon, DEDHub etc.. Save the code to DEDWatchdogClient.ps1, create a Shortcut to the script so you can launch it with a double click.
@@ -92,7 +103,8 @@ The client script does the following:
 Try it by double clicking the DEDWatchdogClient.ps1 shortcut. It sould laucnch a powershell window, terminate DEDHub (if running), send the magic bytes toi the Watchdog (which then resets the USB device) and launch the DEDHub again, This can be done at any time. It doesn't hurt, nothing will go poof. It's like you would replug the USB cable of the USB device.
 
 The Watchdog window should have a mesage that looks similar to the following:
-![20e5a158-caae-4cdb-bbaa-799225d0adde-grafik.png](https://i.imgur.com/6jPNSo8.png) 
+
+![6jPNSo8](https://github.com/user-attachments/assets/08f4faf2-96b3-4d7e-9a24-377616ef68e3)
 
 ### FAMOUS LAST WORDS
 - this is just a prototype
