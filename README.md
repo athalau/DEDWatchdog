@@ -1,12 +1,22 @@
 # DEDWatchdog
 Simgears DED - Watchdog Prototype
 
-# Problem Description
-This repo is all about a freeze / disco bug in Simgears DED (see https://www.simgears.com/products/f16-ded-data-entry-display/ what this product is all about). It exists in the currently available firmware (v1.0) / DEDHub Software (v0910).
+The DEDWatchdog is trying to encounter a freeze / serial line disconnect bug in flight simulator hardware known as [Simgears DED](https://www.simgears.com/products/f16-ded-data-entry-display/). The (currently most recent) DED firmware (v1.0) / DEDHub Software (v0910) provided by the vendor is affected by a bug that, when triggered, "freezes" the display, i.e. no updates occur.
 
-Background for those that do not own it: the Simgears DED seems to be based on a Raspberry Pi Pico. The connection is USB. Simgears made a custom firmware for the Pi Pico. Installation procedure is just like any other Pi Pico flash procedure. The DED device is registered as Serial Console device in the Windows Device Manager.
+The DEDHub application is then unable to communicate with the DED on the serial port until you replug the USB cable, relaunch the DEDHub Application and let the DEDHUb rescan the available ports by manualy clicking a button in the app.
 
-Communication from the Falcon BMS client to the DED is done with "Simgears DEDHub", a  .Net application. The application attaches to the F4 shared mem with it's F4SharedMem.dll contained in the installation. For whatever reason, the .Net application throws the following error from time to time:
+This bug triggers at least when using Simgears DED with [Falcon BMS](https://www.falcon-bms.com). I can't say whether or not this applies to [DCS](https://www.digitalcombatsimulator.com/) too. I have no DCS installed, let alone the F16 model.
+
+There is no official fix available as per this writing. They promised to release a new firmware / fix / workaround, tho. I decided to approach this on my own for educational purposes.
+## Background
+The Simgears DED seems to be based on a Raspberry Pi Pico according to the raw device output. It is connected via the USB port and registers itself as a serial device in the Windows Device Manager. Simgears made a custom firmware for the Pico. Installation procedure is just like any other Pi Pico flash procedure (hence, unplug, push bootsel button on the outside of the case, replug, put new image on the mounted disk, replug).
+
+Communication from the [Falcon BMS](https://www.falcon-bms.com) client to the Simgears DED is done with [Simgears DEDHub](https://www.simgears.com/customer-area/),  a .Net based application. It's closed source and not available to the public. You need to have a customer account at simgears.com to download it.
+
+The DEDHub attaches to the Falcon BMS shared memory segments. The shm is provided by Falcon BMS for the purpose of exchanging in-flight simulator data with external applications and devices. The DEDHub reads the data with the help of the F4SharedMem.dll library that is shipped with the DEDHub and can be found in the installation directory. The DEDHub attaches to the serial device that is connected on the USB port, too.
+
+## Problem Description
+For whatever reason, the .Net application throws the following error from time to time:
 
 ![dotNetUNhandledExeption.png](https://i.imgur.com/Z6KaHRA.png) 
 
@@ -26,19 +36,25 @@ System.IO.IOException: Ein an das System angeschlossenes Gerät funktioniert nic
    bei System.Windows.Forms.NativeWindow.Callback(IntPtr hWnd, Int32 msg, IntPtr wparam, IntPtr lparam)
 ```
 
-DEDHub normal operational status when Falcon BMS is running and Hub is connected to the serial port of the DED device:
+The root cause for the loss of connectivity remains unclear. The USB device is in state OK, does not have any error entries etc. From the Operating System perspective, the device is ready.
 
-![OK.png](https://i.imgur.com/KoPjnu2.png) 
+It seems like the bug is triggered with a much higher probability / more frequently (e.g. 5-15 minutes after you entered the 3d world) when having Falcon BMS running in background and the user doing stuff in other apps on the desktop (a browser, editor, any other 3rd-party app for example). But it happens too if you are flying around with your shiny F16. I've had crashes after 10ish minutes and experienced flights of 45mins that had no issue at all.
 
-As soon as the exception is thrown, the DED Hub states that it's unable to find a suitable COM port / device instead of the Green "....on port COMx"):
+Besides having Falcon BMS in the background, I noticed a more frequent crash behavior if you stay in the 2d world of Falcon (e.g. the Briefing screen) for ages and then commit to the 3d world. Timeframes comparable wot the "having Falcon BMS running in the background.
 
+### DEDHub normal operational status
+This is the Simgears DEDHub Application UI. Bottom right reads the Simulator it connected to (Falcon BMS in the example) and bottom left reads that it's connected to the serial port of the DED device
+![OK.png](https://i.imgur.com/KoPjnu2.png)
+
+### DEDHub error status
+As soon as the exception is thrown, the DED Hub states that it's unable to find a suitable COM port / device like shown blow
 ![NOK.png](https://i.imgur.com/1MSpWra.png) 
 
 Hitting the *Rescan* button does not help as long as you dont replug the USB device. This may be achived by physically replugging the cable or through software that is able to reset a specific USB port (pnputil or the like).
 
 This is by no means a bug in Falcon BMS but either a bug in the DEDHub application or the Firmware on the USB device.
 
-# PARTIAL WORKAROUND
+## PARTIAL WORKAROUND
 It's partial because you need to click the rescan button for whatever reason, even if you reset the port. The Watchdog and client script will get you rid of the clickdance for the Exception messages and manual restart of stuff.
 
 **Note:** the Watchdog needs an additional .exe from here:
