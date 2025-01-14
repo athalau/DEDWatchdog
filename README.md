@@ -96,9 +96,15 @@ Default setting in windows for running powershell scripts seems to be: *disabled
 
 ![grafik](https://github.com/user-attachments/assets/d6601ef6-9660-48f5-8680-f558ee7d0428)
 
-If an error message like the above hits you, the execution of scripts is not allowed and you need to pass the `ExecutionPolicy` switch with the value `Bypass` on the command line., i.e. `powershell.exe -ExecutionPolicy Bypass <other options>... <script>`. This temporary bypasses the restriction to execute Powershell scripts for excactly this single call. This does not change your default setting, but lets you execute the script in question.
+If an error message like the above hits you, the execution of scripts is not allowed and you need to pass the `ExecutionPolicy` switch with the value `Bypass` on the command line., i.e.
 
-See https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies for more information.
+```
+powershell.exe -ExecutionPolicy Bypass <other options>... <script>`.
+```
+
+This temporary bypasses the restriction to execute Powershell scripts for excactly this single call. This does not change your default setting, but lets you execute the script in question. See [About Execution Policies](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies) for more information.
+
+As the Watchdog Daemon needs only to be startet once and then runs until you close the window, it's sufficient to create a shortcut for manual startup:
 
 1. Create a shortcut pointing to `DED_watchdog_server.ps1`
 2. Edit `Properties` > `Target` to be `powershell.exe -noexit -ExecutionPolicy Bypass -file  <path_to_DEDWatchdog.ps1>`
@@ -113,14 +119,14 @@ Alternatively right-click on the shortcut and select "Run As Administrator" manu
 ### Watchdog Client - DED_watchdog_client.ps1
 One variable must be configured to match your setup. The default value will likely match as long as you did not customize the path when you installed the DEDHub.
 
-- $DEDHubExecutable is the full path to the Simgears Hub executable.
+- `$DEDHubExecutable` is the full path to the Simgears Hub executable.
 
 ```
 # Location of the Simgears DED Hub Executable, change accordingly
 $DEDHubExecutable = "C:\Program Files (x86)\SimGears\DEDHub\DEDHub.exe"
 ```
 
-The Watchdog Client should be run with your logged in user, i.e. the one you are using to normally launch Falcon, DEDHub etc. You could create a shortcut like described above (bnut omit the "run as admin" part). This is fine for testing purposes.
+The Watchdog Client should be run with your logged in user, i.e. the one you are using to normally launch Falcon, DEDHub etc. You could create a shortcut like described above (but omit the "run as admin" part). This is fine for testing purposes.
 
 However, you'll pretty sure don't want to click something while in flight. I use [FoxVox](https://foxster.itch.io/foxvox) to trigger the Watchdog Client on demand. I created a new voice command in the "Reset" command group  (part of the Falcon BMS library that can be downloaded there too). The command is named "DED", i.e. when I issue the voice command "RESET DED", the Watchdog Client gets executed:
 
