@@ -58,18 +58,36 @@ Hitting the `Rescan` button does not help as long as you dont replug the USB dev
 This is by no means a bug in Falcon BMS but either a bug in the DEDHub application or the Firmware on the USB device.
 
 ## WORKAROUND
-Using the Watchdog client/server scripts will help to limit the clickdance - i.e. close the info popup and exception error window, replug the USB cable, and restarting the DEDHub software including enforcing a rescan to reestablish the COM port in the DED Hub.
+Using the Watchdog client/server scripts will help to limit the clickdance - i.e. close the info popup and exception error window, replugging the USB cable, and restarting the DEDHub software. This includes enforcing hitting the Rescan button on the DEDHub GUI to re-establish the COM port connection. Restarting USB devices seems to be a task that needs real Administrator permisisons in windows, regardless whether pnptuil or other tools are used. The Watchdog Daemon therefor needs to run as Administrator.
 
-The Wtachdog Watchdog daemon and client is based on Windows Powershell. Daemon and client communicate over a named pipe so that the watchdog client can run unprivileged and notify the watchdog daemon (running privileged) to restart the USB device. This is achived by sending the magic string "RestartDED" from the client to the server. Every other string is ignored by the watchdog daemon. After the magic string is send, the watchdog client then restarts the DEDHub application and triggers the rescan by virtually pressing the ENTER key.
+The Watchdog Daemon and client is based on Windows Powershell, workflow as follows:
 
-I used Powershell because it should be available on every Windows client running Falcon BMS. I have very limited knowledge in Windows Powershell, so don't expect fancy or even beautyful code compliant to any paradigm :). I split it into two scripts because I like the idea of least privilege. The only thing that is needed to be done as real Administrator is the reset of the USB port/device. it could have been done in one script that just does everything. But this would have been ended up running the DEDHub with Administrator privileges.
+1. The Watchdog Daemon resets the USB port when it receives the magic command from the Watchdog Client
+2. The Watchdog Client sends the magic command "RestartDED" to the Watchdog Server when it's executed
+3. The Watchdog Client then forcibly kills the DED Hub, this kills all the Exception and Info dialog windows too, because they are DED Hub childs
+3. The Watchdog Client starts the DED Hub and sends a ENTER keypress to the DED Hub to trigger the rescan as a human being would.
+4. The Watchdog Client brings the Falcon BMS process back into the foreground
+
+Note: I used Powershell because it should be available on every Windows client running Falcon BMS. I have very limited knowledge in Windows Powershell, so don't expect fancy or even beautyful code compliant to any paradigm :). I split the tasks into two scripts because I like the idea of least privilege. The only thing that is needed to be done as real Administrator is the reset of the USB port/device. It could have been done in one script that just does everything. But this would have been ended up running the DEDHub with Administrator privileges. Running everything unprivileged and raise permissions just for the USB reset call triggers UAC / asks for permisison to be called as Administrator, hence not an option in this case.
+
 ### Watchdog Daemon - DED_watchdog_server.ps1
+Two variables need to be configured to match your setup.
+
+- `$DEDDeviceId` is the unique USB Device ID of your Simgears DED.
+- `$USBResetCmd` is the full path to the `RestartUsbPort.exe` (see Prerequesite below)
+
+```
+...
+# this is the USB device ID of the Simgears DED. Change accordingly.
+$DEDDeviceId = "USB\VID_2E8A&PID_000A\E66250D5C3268329"
+# $USBResetCmd = "pnputil /restart-device"
+$USBResetCmd = "C:\Users\r00t\Downloads\RestartUsbPort\x64\RestartUsbPort.exe"
+...
+```
 
 #### Prerequesite
 **Note:** the Watchdog needs an additional .exe from here:
  https://www.uwe-sieber.de/misc_tools_e.html (RestartUsbPort V1.2.1 - Restarts a USB port)
-
-It's full path is configured in the `$USBResetCmd` variable. You need to modify it to your needs. Drto. for the USD ID of your DED. It may be different from mine.
 
 `RestartUsbPort.exe` is needed, because the Powershell build-in `pnputil /restart-device` mechanic seems to be unreliable for this task. It works the first time you execute, but then it refuses to reset again because it insists on rebooting to take effect. YMMV. Uwe Sieber, the author of RestatUsbPort, developed several useful tools. I recommend taking a look at his old-school software repo.
 
@@ -93,16 +111,28 @@ Alternatively right-click on the shortcut and select "Run As Administrator" manu
 ![1KNH0HE](https://github.com/user-attachments/assets/a9fe6731-f419-4a2d-a0ef-50ef1736e451)
 
 ### Watchdog Client - DED_watchdog_client.ps1
-The client part can and should be run in a powerswhell launched with your user, i.e. the one you are using to normally launch Falcon, DEDHub etc.. Save the code to DEDWatchdogClient.ps1, create a Shortcut to the script so you can launch it with a double click.
+One variable must be configured to match your setup. The default value will likely match as long as you did not customize the path when you installed the DEDHub.
 
-The client script does the following:
-- terminate DEDHub, wait 2 seconds
-- send message to Watrchdog to reset USB device, wait 2 seconds
-- restart DEDHub
+- $DEDHubExecutable is the full path to the Simgears Hub executable.
 
-Try it by double clicking the DEDWatchdogClient.ps1 shortcut. It sould laucnch a powershell window, terminate DEDHub (if running), send the magic bytes toi the Watchdog (which then resets the USB device) and launch the DEDHub again, This can be done at any time. It doesn't hurt, nothing will go poof. It's like you would replug the USB cable of the USB device.
+```
+# Location of the Simgears DED Hub Executable, change accordingly
+$DEDHubExecutable = "C:\Program Files (x86)\SimGears\DEDHub\DEDHub.exe"
+```
 
-The Watchdog window should have a mesage that looks similar to the following:
+The Watchdog Client should be run with your logged in user, i.e. the one you are using to normally launch Falcon, DEDHub etc. You could create a shortcut like described above (bnut omit the "run as admin" part). This is fine for testing purposes.
+
+However, you'll pretty sure don't want to click something while in flight. I use [FoxVox](https://foxster.itch.io/foxvox) to trigger the Watchdog Client on demand. I created a new voice command in the "Reset" command group  (part of the Falcon BMS library that can be downloaded there too). The command is named "DED", i.e. when I issue the voice command "RESET DED", the Watchdog Client gets executed:
+
+![VSa6VmN](https://github.com/user-attachments/assets/b4dd10c9-da3e-46e2-800f-dd4fa0d34756)
+
+Note: I couldn't find a way to execute a command with arguments and parameters in FoxVox. But we need arguments as the .ps1 is not executable and pointing the "Run:" field in FoxVox to a windows shortcut does not work for reasons. I wrapped the complete command with a batchfile DED_watchdog_client.bat that contains:
+
+```
+C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -file E:\Repositories\DEDWatchdog\DED_watchdog_client.ps1
+```
+
+When you execute the Watchdog Client, the Watchdog Daemon window should have a message printed that looks similar to the following:
 
 ![6jPNSo8](https://github.com/user-attachments/assets/08f4faf2-96b3-4d7e-9a24-377616ef68e3)
 
@@ -110,13 +140,14 @@ The Watchdog window should have a mesage that looks similar to the following:
 - this is just a prototype
 - there is no proper error handling implemented
 - the solution helps to get the freeze situation solved without fiddling around with a USB cable, clicking five different buttons spread over three screens (happens to me always....)
-- It limits your work to trigger the client scpirt with <some technique> and click the Rescan button once. [FoxVox] (https://foxster.itch.io/) may be helpful as a trigger mechanic if you're using a voice control or similar.
+- It limits your work to trigger the client script with <some technique>. I recommend [FoxVox](https://foxster.itch.io/). But of course there are many alternatives (Thrustmaster Target can trigger executables, Voice Attack can pretty sure too.
 - pnputil fails with "need reboot", that's why I relied on an additonal 3rd-party .exe instead of built-in powershell features. But again, the tools provided by Uwe Sieber are useful, you might want to take a look regardless.
-- The DEDHub does not trigger a RESCAN on launch for whatever reason. When it failed once with the mentioned Exception, you'd even need to click RESCAN manually. This is in contrast to the behavior when you execute the clientscript in a normal behaviour moment, i.e., no error occured on the DED. The cleint script sends the ENTER keypress now at the end. It should therefor be fully automatable now.
 
 ## References
 - https://learn.microsoft.com/en-us/dotnet/api/system.io.pipes.namedpipeserverstream
 - https://learn.microsoft.com/en-us/dotnet/api/system.io.pipes.pipeaccessrule
 - https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax
+- https://www.simgears.com/
 - https://www.uwe-sieber.de/misc_tools_e.html (RestartUsbPort V1.2.1 - Restarts a USB port)
 - https://forum.falcon-bms.com/topic/26270/simgears-ded-keeps-freezing
+- https://foxster.itch.io/
